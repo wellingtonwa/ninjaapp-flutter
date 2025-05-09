@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:ninjaapp/src/models/ninjaapp_configuracao.dart';
+import 'package:ninjaapp/src/models/restore_file.dart';
 import 'package:ninjaapp/src/models/restore_link.dart';
 import 'package:ninjaapp/src/repository/ninjaapp_configuracao_repository.dart';
 import 'package:ninjaapp/src/service/restore_service.dart';
@@ -33,38 +36,74 @@ class _RestoreViewState extends State<RestoreView> {
 
   final nomeBancoController = TextEditingController();
   final linkBackupController = TextEditingController();
+  final fileBackupController = TextEditingController();
   final regexEspacoEmBranco = RegExp(r"\s");
 
   @override
   void initState() {
     super.initState();
+    _load();
+  }
+
+  void _load() {
     ninjaappConfiguracaoRepository.getConfiguracao().then((config) {
       this.config = config;
     });
 
     if (sharedPreferences.containsKey(sharedPreferencesKey)) {
       String storedData = sharedPreferences.getString(sharedPreferencesKey)!;
-      var dados = JsonDecoder().convert(storedData) as Map<String, dynamic>;
+      var dados =
+          const JsonDecoder().convert(storedData) as Map<String, dynamic>;
       nomeBancoController.text = dados['nomeBanco'];
-      linkBackupController.text = dados['link'];
-      setState(() {});
+      linkBackupController.text = dados['link'] ?? '';
+      fileBackupController.text = dados['file'] ?? '';
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {});
+      });
     }
+  }
+
+  void pickBackupFile() async {
+    Directory initialDirectory = Directory(fileBackupController.text);
+    FilePicker.platform
+        .pickFiles(
+            dialogTitle: 'O arquivo de que contém o backup',
+            allowedExtensions: ['zip', 'backup'],
+            lockParentWindow: true,
+            initialDirectory: initialDirectory.path)
+        .then((FilePickerResult? onValue) {
+      if (onValue != null && onValue.files.isNotEmpty) {
+        linkBackupController.text = '';
+        fileBackupController.text = onValue.files.first.path!;
+        if (mounted) {
+          setState(() {});
+        }
+      }
+    });
   }
 
   void formSubmit() async {
     if (formRestoreKey.currentState!.validate()) {
-      RestoreLink restoreLink =
-          RestoreLink(linkBackupController.text, nomeBancoController.text);
-      await restoreService.restoreLink(restoreLink, config);
-      Map<String, dynamic> dadosRestoreLink = {
-        'nomeBanco': nomeBancoController.text,
-        'link': linkBackupController.text
-      };
-      print(dadosRestoreLink.toString());
-      sharedPreferences.setString(
-          sharedPreferencesKey, jsonEncode(dadosRestoreLink));
-      widget.settingsController.loadSettings();
-      Navigator.pop(context);
+      if (fileBackupController.text.isNotEmpty ||
+          linkBackupController.text.isNotEmpty) {
+        Map<String, dynamic> dadosRestoreLink = {
+          'nomeBanco': nomeBancoController.text,
+          'link': linkBackupController.text,
+          'file': fileBackupController.text
+        };
+        sharedPreferences.setString(
+            sharedPreferencesKey, jsonEncode(dadosRestoreLink));
+        widget.settingsController.loadSettings();
+        if (fileBackupController.text.isNotEmpty) {
+          RestoreFile restoreFile =
+              RestoreFile(fileBackupController.text, nomeBancoController.text);
+          await restoreService.restoreFile(restoreFile, config);
+        } else {
+          RestoreLink restoreLink =
+              RestoreLink(linkBackupController.text, nomeBancoController.text);
+          await restoreService.restoreLink(restoreLink, config);
+        }
+      }
     } else {
       print("Inválido!");
     }
@@ -84,11 +123,13 @@ class _RestoreViewState extends State<RestoreView> {
                 label: Text('Nome do Banco'),
               ),
               validator: (value) {
+                String? retorno;
                 if (value == null ||
                     value.isEmpty ||
                     regexEspacoEmBranco.hasMatch(value)) {
-                  return 'Nome do banco inválido!';
+                  retorno = 'Nome do banco inválido!';
                 }
+                return retorno;
               },
             ),
           ),
@@ -100,12 +141,56 @@ class _RestoreViewState extends State<RestoreView> {
                 border: OutlineInputBorder(),
                 label: Text('Link Backup'),
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Informe a url do backup';
+              onChanged: (value) {
+                if (value.isNotEmpty) {
+                  fileBackupController.text = '';
                 }
               },
+              validator: (value) {
+                String? retorno;
+                if ((value == null && value!.isEmpty) &&
+                    fileBackupController.text.isEmpty) {
+                  retorno = 'Informe a url do backup';
+                } else if (fileBackupController.text.isEmpty) {
+                  fileBackupController.text = '';
+                }
+                return retorno;
+              },
             ),
+          ),
+          Row(
+            children: [
+              Expanded(
+                flex: 8,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: TextFormField(
+                    controller: fileBackupController,
+                    enabled: false,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      label: Text('Arquivo Backup'),
+                    ),
+                    validator: (value) {
+                      String? retorno;
+                      if (fileBackupController.text.isEmpty &&
+                          linkBackupController.text.isEmpty) {
+                        retorno = 'Selecione um arquivo para restaurar o banco';
+                      }
+                      return retorno;
+                    },
+                  ),
+                ),
+              ),
+              Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: ElevatedButton(
+                        onPressed: pickBackupFile,
+                        child: const Icon(Icons.file_open)),
+                  ))
+            ],
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

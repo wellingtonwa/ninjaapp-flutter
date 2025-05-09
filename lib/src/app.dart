@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:ninjaapp/src/page/dashboard/dashboard_view.dart';
+import 'package:ninjaapp/src/page/main_view.dart';
 import 'package:ninjaapp/src/page/restore/restore_view.dart';
 import 'settings/settings_controller.dart';
 import 'settings/settings_view.dart';
@@ -68,10 +68,9 @@ class MyApp extends StatelessWidget {
               builder: (BuildContext context) {
                 switch (routeSettings.name) {
                   case SettingsView.routeName:
-                    return SettingsView(controller: settingsController);
-                  case DashboardView.routeName:
-                    return DashboardView(
-                        settingsController: settingsController);
+                    return const SettingsView();
+                  case MainView.routeName:
+                    return MainView(settingsController: settingsController);
                   case RestoreView.routeName:
                   default:
                     return RestoreView();

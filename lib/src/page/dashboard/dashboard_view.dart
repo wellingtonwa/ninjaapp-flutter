@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:ninjaapp/src/components/database_card.dart';
@@ -9,8 +7,8 @@ import 'package:ninjaapp/src/models/database.dart';
 import 'package:ninjaapp/src/models/etapa_bitrix.dart';
 import 'package:ninjaapp/src/models/informacao_bitrix.dart';
 import 'package:ninjaapp/src/models/ninjaapp_configuracao.dart';
-import 'package:ninjaapp/src/page/restore/restore_view.dart';
 import 'package:ninjaapp/src/repository/ninjaapp_configuracao_repository.dart';
+import 'package:ninjaapp/src/service/log_service.dart';
 import 'package:ninjaapp/src/service/restore_service.dart';
 import 'package:ninjaapp/src/settings/settings_controller.dart';
 import 'package:ninjaapp/src/settings/settings_view.dart';
@@ -21,8 +19,7 @@ class DashboardView extends StatefulWidget {
   final SettingsController settingsController;
 
   @override
-  State<StatefulWidget> createState() =>
-      DashboardViewState(this.settingsController);
+  State<StatefulWidget> createState() => DashboardViewState(settingsController);
 }
 
 class DashboardViewState extends State<DashboardView> {
@@ -40,35 +37,37 @@ class DashboardViewState extends State<DashboardView> {
   BitrixApi? bitrixApi;
   String? bancoSelecionado;
   RestoreService restoreService = GetIt.I.get<RestoreService>();
+  LogService logService = GetIt.I.get<LogService>();
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     _load();
+    settingsController.addListener(_load);
   }
 
   void _load() async {
     carregado = false;
-    verificarConexao();
-    await ninjaappConfiguracaoRepository.getConfiguracao().then((config) {
+    await verificarConexao();
+
+    if (settingsController.config.bitrixUrl != null &&
+        settingsController.config.bitrixUrl!.isNotEmpty) {
       bitrixApi = BitrixApi(settingsController.config.bitrixUrl!);
       bitrixApi!.getStageInfo().then((onValue) {
         etapas.clear();
         etapas.addAll(onValue);
-        setState(() {});
       });
-    });
+    }
     await getDatabases();
     carregado = true;
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<List<Database>> getDatabases() async {
-    await postgresHelper.verificarConexao();
     databases.clear();
     List<String> nomesDatabases = await postgresHelper.getDatabasesName();
-    numeroTarefas.clear();
     for (var item in nomesDatabases) {
       Database database =
           Database(dbName: item, isTarefa: false, informacaoBitrix: null);
@@ -77,13 +76,10 @@ class DashboardViewState extends State<DashboardView> {
         numeroTarefas.add(numeroTarefa);
         database.isTarefa = true;
         database.numeroTarefa = numeroTarefa;
-        if (bitrixApi != null) {
-          database.informacaoBitrix =
-              await bitrixApi!.getDadosBitrix(numeroTarefa);
-        }
       }
       databases.add(database);
     }
+
     return databases;
   }
 
@@ -101,103 +97,90 @@ class DashboardViewState extends State<DashboardView> {
     await restoreService.findPostgresBinaries();
   }
 
-  void verificarConexao() async {
-    BitrixApi(settingsController.config.bitrixUrl!).getStageInfo();
-    try {
-      await postgresHelper.verificarConexao();
-    } catch (error) {
-      print(error);
-      Navigator.restorablePushNamed(context, SettingsView.routeName);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                'Erro ao conectar ao postgres. Verifique as configurações.')),
-      );
+  Future<void> verificarConexao() async {
+    if (settingsController.config.postgresUrl != null) {
+      try {
+        print('Conexão válida: ${await postgresHelper.verificarConexao()}');
+      } catch (error) {
+        print(error);
+        if (mounted) {
+          Navigator.restorablePushNamed(context, SettingsView.routeName);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text(
+                    'Erro ao conectar ao postgres. Verifique as configurações.')),
+          );
+        }
+        ;
+      }
+    } else {
+      if (mounted) {
+        Navigator.restorablePushNamed(context, SettingsView.routeName);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Erro ao conectar ao postgres. Verifique as configurações.')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-        listenable: settingsController,
-        builder: (BuildContext context, Widget? child) {
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text("Dashboard"),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.settings),
-                  onPressed: () {
-                    // Navigate to the settings page. If the user leaves and returns
-                    // to the app after it has been killed while running in the
-                    // background, the navigation stack is restored.
-                    Navigator.restorablePushNamed(
-                        context, SettingsView.routeName);
-                  },
-                ),
-              ],
-            ),
-            body: Column(
-              children: [
-                Visibility(
-                    visible: !carregado,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(
-                          color: Colors.blue[800],
-                        ),
-                      ],
+    return Scaffold(
+      body: Column(
+        children: [
+          Visibility(
+              visible: !carregado,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: Colors.blue[800],
+                  ),
+                ],
+              )),
+          Visibility(
+            visible: carregado,
+            child: Column(children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: ElevatedButton(
+                        onPressed: _load, child: const Icon(Icons.refresh)),
+                  ),
+                ],
+              ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height - 200,
+                    child: Visibility(
+                      visible: databases.isNotEmpty,
+                      child: GridView.builder(
+                          gridDelegate:
+                              SliverGridDelegateWithMaxCrossAxisExtent(
+                                  maxCrossAxisExtent: 400),
+                          itemCount: databases.length,
+                          itemBuilder: (context, index) {
+                            Database banco = databases[index];
+                            return DatabaseCard(
+                              key: Key('database-card-${banco.dbName}'),
+                              settingsController,
+                              etapas,
+                              _load,
+                              database: banco,
+                            );
+                          }),
                     )),
-                Visibility(
-                  visible: carregado,
-                  child: Column(children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.restorablePushNamed(
-                                    context, RestoreView.routeName);
-                              },
-                              child: const Text('Restaurar')),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: ElevatedButton(
-                              onPressed: _load,
-                              child: const Icon(Icons.refresh)),
-                        ),
-                      ],
-                    ),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Container(
-                          width: MediaQuery.of(context).size.width,
-                          height: MediaQuery.of(context).size.height * 0.8,
-                          child: Visibility(
-                            visible: databases.isNotEmpty,
-                            child: ListView.builder(
-                                shrinkWrap: true,
-                                itemCount: databases.length,
-                                itemBuilder: (context, index) {
-                                  Database banco = databases[index];
-                                  return DatabaseCard(
-                                    settingsController,
-                                    etapas,
-                                    _load,
-                                    database: banco,
-                                  );
-                                }),
-                          )),
-                    ),
-                  ]),
-                ),
-              ],
-            ),
-          );
-        });
+              ),
+            ]),
+          ),
+        ],
+      ),
+    );
   }
 }

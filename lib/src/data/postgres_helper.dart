@@ -36,13 +36,17 @@ class PostgresHelper {
   }
 
   Future<List<String>> getDatabasesName() async {
-    Result resultadoConsulta =
-        await conn.execute('''SELECT datname as dbname FROM pg_database 
+    List<String> databases = [];
+    try {
+      Result resultadoConsulta =
+          await conn.execute('''SELECT datname as dbname FROM pg_database 
                   WHERE datistemplate = false and datname LIKE '%'
                   ORDER BY datname;''');
-    List<String> databases = [];
-    for (var row in resultadoConsulta) {
-      databases.add(row[0] as String);
+      for (var row in resultadoConsulta) {
+        databases.add(row[0] as String);
+      }
+    } catch (error) {
+      print('Erro ao consultar as bases de dados: $error');
     }
     return databases;
   }

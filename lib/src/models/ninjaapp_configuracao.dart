@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 class NinjaappConfiguracao {
   int? id;
   String? postgresUrl;

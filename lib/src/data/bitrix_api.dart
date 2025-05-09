@@ -11,7 +11,8 @@ class BitrixApi {
 
   BitrixApi(this.baseUrl);
 
-  Future<InformacaoBitrix> getDadosBitrix(String idTask) async {
+  Future<InformacaoBitrix?> getDadosBitrix(String idTask) async {
+    print('object');
     // Implement the logic to fetch data from Bitrix API
     var parse = Uri.parse(baseUrl);
     var rest =
@@ -20,7 +21,16 @@ class BitrixApi {
       'select[]': '*',
     }));
     var jsonTask = jsonDecode(rest.body);
-    return InformacaoBitrix.fromJson(jsonTask['result']['task']);
+    InformacaoBitrix? retorno;
+
+    if (jsonTask is Map &&
+        jsonTask.containsKey('result') &&
+        jsonTask['result'] is Map &&
+        jsonTask['result'].containsKey('task')) {
+      retorno = InformacaoBitrix.fromJson(jsonTask['result']['task']);
+    }
+
+    return retorno;
   }
 
   Future<List<ComentarioBitrix>> getComentariosTarefa(String idTask) async {

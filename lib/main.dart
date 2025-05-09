@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:ninjaapp/src/data/database_helper.dart';
 import 'package:ninjaapp/src/repository/ninjaapp_configuracao_repository.dart';
+import 'package:ninjaapp/src/service/log_service.dart';
 import 'package:ninjaapp/src/service/restore_service.dart';
 import 'package:ninjaapp/src/util/io.util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -21,6 +22,7 @@ void main() async {
   }
 
   register<Database>(await DatabaseHelper.internal().initDatabase());
+  register<LogService>(LogService());
   register<RestoreService>(RestoreService());
   register<NinjaappConfiguracaoRepository>(NinjaappConfiguracaoRepository());
   register<IOUtil>(IOUtil());

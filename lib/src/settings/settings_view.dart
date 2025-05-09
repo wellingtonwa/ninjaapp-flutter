@@ -1,8 +1,8 @@
-import 'dart:ffi';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:ninjaapp/src/models/ninjaapp_configuracao.dart';
 import 'package:ninjaapp/src/repository/ninjaapp_configuracao_repository.dart';
 
@@ -14,20 +14,16 @@ import 'settings_controller.dart';
 /// Widgets that listen to the SettingsController are rebuilt.
 ///
 class SettingsView extends StatefulWidget {
-  const SettingsView({super.key, required this.controller});
+  const SettingsView({super.key});
 
   static const routeName = '/settings';
 
-  final SettingsController controller;
-
   @override
-  State<StatefulWidget> createState() => SettingsViewState(this.controller);
+  State<StatefulWidget> createState() => SettingsViewState();
 }
 
 class SettingsViewState extends State<SettingsView> {
-  SettingsViewState(this.controller);
-
-  SettingsController controller;
+  SettingsController controller = GetIt.I.get<SettingsController>();
 
   final formKey = GlobalKey<FormState>();
   final postgresUrlController = TextEditingController();
@@ -51,7 +47,6 @@ class SettingsViewState extends State<SettingsView> {
     ninjaappConfiguracaoRepository
         .getConfiguracao()
         .then((ninjaappConfiguracao) {
-      print(ninjaappConfiguracao.isPostgresOnDocker);
       configId = ninjaappConfiguracao.id;
       postgresUrlController.text = ninjaappConfiguracao.postgresUrl ?? '';
       postgresPortController.text = ninjaappConfiguracao.postgresPort ?? '';
@@ -64,7 +59,9 @@ class SettingsViewState extends State<SettingsView> {
       taskFolderController.text = ninjaappConfiguracao.taskFolder ?? '';
       backupFolderController.text = ninjaappConfiguracao.backupFolder ?? '';
       bitrixUrlController.text = ninjaappConfiguracao.bitrixUrl ?? '';
-      setState(() {});
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {});
+      });
     });
   }
 
@@ -81,7 +78,9 @@ class SettingsViewState extends State<SettingsView> {
           .then((onValue) {
         if (onValue != null) {
           taskFolderController.text = onValue;
-          setState(() {});
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {});
+          });
         }
       });
     }
@@ -95,7 +94,10 @@ class SettingsViewState extends State<SettingsView> {
           .then((onValue) {
         if (onValue != null) {
           backupFolderController.text = onValue;
-          setState(() {});
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() {});
+          });
         }
       });
     }
@@ -111,32 +113,49 @@ class SettingsViewState extends State<SettingsView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Configuração de arquivos e pastas'),
-          Row(
-            children: [
-              Text(
-                  'Pasta selecionada salvar os arquivos da tarefa: ${taskFolderController.text}'),
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: ElevatedButton(
-                  onPressed: pickTaskFolder,
-                  child: const Text('Selecionar pasta'),
+          Container(
+            decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(8)),
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.all(8),
+            width: MediaQuery.of(context).size.width,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    'Pasta selecionada salvar os arquivos da tarefa: ${taskFolderController.text}'),
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: ElevatedButton(
+                    onPressed: pickTaskFolder,
+                    child: const Text('Selecionar pasta'),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          Row(
-            children: [
-              Text(
-                  'Pasta selecionada salvar os arquivos do banco de dados: ${backupFolderController.text}'),
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: ElevatedButton(
-                  onPressed: pickBackupFolder,
-                  child: const Text('Selecionar pasta'),
-                ),
-              )
-            ],
-          )
+          Container(
+              decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(8)),
+              margin: const EdgeInsets.symmetric(vertical: 10),
+              padding: const EdgeInsets.all(8),
+              width: MediaQuery.of(context).size.width,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                      'Pasta selecionada salvar os arquivos do banco de dados: ${backupFolderController.text}'),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: ElevatedButton(
+                      onPressed: pickBackupFolder,
+                      child: const Text('Selecionar pasta'),
+                    ),
+                  )
+                ],
+              ))
         ],
       ),
     );
@@ -148,9 +167,9 @@ class SettingsViewState extends State<SettingsView> {
         ),
         margin: const EdgeInsets.symmetric(vertical: 10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: const Text('Configuração de Integrações'),
+          const Padding(
+            padding: EdgeInsets.all(8),
+            child: Text('Configuração de Integrações'),
           ),
           Padding(
             padding: const EdgeInsets.all(8),
@@ -245,8 +264,10 @@ class SettingsViewState extends State<SettingsView> {
                   value: isPostgresOnDocker,
                   activeColor: Colors.blue,
                   onChanged: (value) {
-                    setState(() {
-                      isPostgresOnDocker = value;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      setState(() {
+                        isPostgresOnDocker = value;
+                      });
                     });
                   },
                 ),
@@ -254,7 +275,7 @@ class SettingsViewState extends State<SettingsView> {
             ],
           ),
           Visibility(
-              visible: isPostgresOnDocker as bool,
+              visible: isPostgresOnDocker,
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: TextFormField(
@@ -296,13 +317,15 @@ class SettingsViewState extends State<SettingsView> {
 
         ninjaappConfiguracaoRepository
             .saveConfiguracao(ninjaappConfiguracao)
-            .then((ninjaappConfiguracao) {
+            .then((ninjaappConfiguracao) async {
           print('ID: ${ninjaappConfiguracao.id}');
-          controller.updateConfig(ninjaappConfiguracao);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Configuração salva com sucesso!')),
-          );
-          Navigator.pop(context);
+          await controller.updateConfig(ninjaappConfiguracao);
+          Future.delayed(const Duration(milliseconds: 500), () async {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Configuração salva com sucesso!')),
+            );
+            Navigator.pop(context);
+          });
         }).catchError((error) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Erro ao salvar configuração!')),
@@ -320,39 +343,42 @@ class SettingsViewState extends State<SettingsView> {
         body: SingleChildScrollView(
           child: Form(
               key: formKey,
-              child: Column(children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  // Glue the SettingsController to the theme selection DropdownButton.
-                  //
-                  // When a user selects a theme from the dropdown list, the
-                  // SettingsController is updated, which rebuilds the MaterialApp.
-                  child: DropdownButton<ThemeMode>(
-                    // Read the selected themeMode from the controller
-                    value: controller.themeMode,
-                    // Call the updateThemeMode method any time the user selects a theme.
-                    onChanged: controller.updateThemeMode,
-                    items: const [
-                      DropdownMenuItem(
-                        value: ThemeMode.system,
-                        child: Text('System Theme'),
-                      ),
-                      DropdownMenuItem(
-                        value: ThemeMode.light,
-                        child: Text('Light Theme'),
-                      ),
-                      DropdownMenuItem(
-                        value: ThemeMode.dark,
-                        child: Text('Dark Theme'),
-                      ),
-                    ],
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    // Glue the SettingsController to the theme selection DropdownButton.
+                    //
+                    // When a user selects a theme from the dropdown list, the
+                    // SettingsController is updated, which rebuilds the MaterialApp.
+                    child: DropdownButton<ThemeMode>(
+                      // Read the selected themeMode from the controller
+                      value: controller.themeMode,
+                      // Call the updateThemeMode method any time the user selects a theme.
+                      onChanged: controller.updateThemeMode,
+                      items: const [
+                        DropdownMenuItem(
+                          value: ThemeMode.system,
+                          child: Text('System Theme'),
+                        ),
+                        DropdownMenuItem(
+                          value: ThemeMode.light,
+                          child: Text('Light Theme'),
+                        ),
+                        DropdownMenuItem(
+                          value: ThemeMode.dark,
+                          child: Text('Dark Theme'),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                postgresFields,
-                arquivoEPastas,
-                integracoes,
-                ElevatedButton(onPressed: submit, child: const Text('Salvar'))
-              ])),
+                  postgresFields,
+                  arquivoEPastas,
+                  integracoes,
+                  ElevatedButton(onPressed: submit, child: const Text('Salvar'))
+                ]),
+              )),
         ));
   }
 }

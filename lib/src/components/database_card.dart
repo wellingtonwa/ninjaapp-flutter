@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:ninjaapp/src/components/bitrix_task_info.dart';
+import 'package:ninjaapp/src/data/bitrix_api.dart';
 import 'package:ninjaapp/src/models/database.dart';
 import 'package:ninjaapp/src/models/etapa_bitrix.dart';
 import 'package:ninjaapp/src/models/informacao_bitrix.dart';
@@ -25,6 +26,9 @@ class DatabaseCard extends StatefulWidget {
 
 class _DatabaseCardState extends State<DatabaseCard> {
   final RestoreService restoreService = GetIt.I.get<RestoreService>();
+  final SettingsController settingsController =
+      GetIt.I.get<SettingsController>();
+  BitrixApi? bitrixApi;
   final IOUtil ioUtil = GetIt.I.get<IOUtil>();
   String? numeroTarefa;
   InformacaoBitrix? informacaoBitrix;
@@ -32,10 +36,24 @@ class _DatabaseCardState extends State<DatabaseCard> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    if (widget.database != null && (widget.database!.isTarefa ?? false)) {
-      informacaoBitrix = widget.database!.informacaoBitrix!;
+    _load();
+  }
+
+  void _load() async {
+    if (settingsController.config.bitrixUrl != null &&
+        settingsController.config.bitrixUrl!.isNotEmpty) {
+      bitrixApi = BitrixApi(settingsController.config.bitrixUrl!);
+    }
+    if (widget.database != null &&
+        (widget.database!.isTarefa ?? false) &&
+        widget.database!.numeroTarefa != null &&
+        bitrixApi != null) {
+      informacaoBitrix =
+          await bitrixApi!.getDadosBitrix(widget.database!.numeroTarefa!);
+    }
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -81,37 +99,41 @@ class _DatabaseCardState extends State<DatabaseCard> {
     return Card(
         child: Column(
       children: [
-        ListTile(
-            title: Text(widget.database?.dbName ??
-                'Não foi possível pegar o nome do banco'),
-            subtitle: Visibility(
-              visible: widget.database!.informacaoBitrix != null,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (informacaoBitrix != null)
-                    BitrixTaskInfo(informacaoBitrix!, widget.etapas),
-                ],
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.database?.dbName ??
+                    'Não foi possível pegar o nome do banco',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-            )),
-        Row(
-          children: [
-            IconButton(
-                onPressed: confirmDeleteDatabase,
-                icon: const Icon(Icons.delete)),
-            Visibility(
-              visible: widget.database?.isTarefa ?? false,
-              child: IconButton(
-                  onPressed: () {
-                    String dirPath =
-                        '${widget.settingsController.config.taskFolder!}/tarefa-${widget.database?.numeroTarefa!}';
-                    ioUtil.createPath(dirPath, true, recursive: true);
-                    ioUtil.openFolder(dirPath);
-                  },
-                  icon: const Icon(Icons.folder)),
-            )
-          ],
+              if (informacaoBitrix != null)
+                BitrixTaskInfo(informacaoBitrix!, widget.etapas),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              IconButton(
+                  onPressed: confirmDeleteDatabase,
+                  icon: const Icon(Icons.delete)),
+              Visibility(
+                visible: widget.database?.isTarefa ?? false,
+                child: IconButton(
+                    onPressed: () {
+                      String dirPath =
+                          '${widget.settingsController.config.taskFolder!}/tarefa-${widget.database?.numeroTarefa!}';
+                      ioUtil.createPath(dirPath, true, recursive: true);
+                      ioUtil.openFolder(dirPath);
+                    },
+                    icon: const Icon(Icons.folder)),
+              )
+            ],
+          ),
         )
       ],
     ));
