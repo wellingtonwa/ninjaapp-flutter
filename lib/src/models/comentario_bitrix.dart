@@ -18,14 +18,17 @@ class ComentarioBitrix {
     AUTHOR_EMAIL = json['AUTHOR_EMAIL'];
     POST_DATE = json['POST_DATE'];
     POST_MESSAGE = json['POST_MESSAGE'];
-    if (json['ATTACHED_OBJECTS'] != null) {
+    if (json.containsKey('ATTACHED_OBJECTS') &&
+        json['ATTACHED_OBJECTS'] != null) {
       ATTACHED_OBJECTS = <AnexoComentarioBitrix>[];
-      json['ATTACHED_OBJECTS'].forEach((v) {
-        ATTACHED_OBJECTS!.add(AnexoComentarioBitrix.fromJson(v));
-      });
+      List<String> chaves = json['ATTACHED_OBJECTS'].keys.toList();
+      for (var chave in chaves) {
+        ATTACHED_OBJECTS!.add(
+            AnexoComentarioBitrix.fromJson(json['ATTACHED_OBJECTS'][chave]));
+      }
     }
   }
-  
+
   @override
   String toString() {
     return 'ComentarioBitrix{POST_MESSAGE_HTML: $POST_MESSAGE_HTML, ID: $ID, AUTHOR_ID: $AUTHOR_ID, AUTHOR_NAME: $AUTHOR_NAME, AUTHOR_EMAIL: $AUTHOR_EMAIL, POST_DATE: $POST_DATE, POST_MESSAGE: $POST_MESSAGE, ATTACHED_OBJECTS: $ATTACHED_OBJECTS}';

@@ -22,11 +22,32 @@ class LogViewState extends State<LogView> {
       body: ListenableBuilder(
         listenable: logService,
         builder: (context, child) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Column(
-              children: [
-                Row(
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height - 184,
+                    child: ListView.builder(
+                      reverse: true,
+                      itemCount: logService.getLogText().length,
+                      itemBuilder: (context, index) {
+                        return Text(
+                          logService.getLogText()[
+                              (logService.getLogText().length - 1) - index],
+                          style: const TextStyle(color: Colors.white),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Tooltip(
                       message: 'Limpar mensagens do logs',
@@ -34,28 +55,12 @@ class LogViewState extends State<LogView> {
                           onPressed: () {
                             logService.clearLogText();
                           },
-                          child: const Icon(Icons.delete)),
-                    ),
+                          child: const Icon(Icons.delete_outline_sharp)),
+                    )
                   ],
                 ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height - 184,
-                  child: ListView.builder(
-                    reverse: true,
-                    itemCount: logService.getLogText().length,
-                    itemBuilder: (context, index) {
-                      return Text(
-                        logService.getLogText()[
-                            (logService.getLogText().length - 1) - index],
-                        style: const TextStyle(color: Colors.white),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),

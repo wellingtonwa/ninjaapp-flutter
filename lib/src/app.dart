@@ -1,10 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ninjaapp/src/page/main_view.dart';
-import 'package:ninjaapp/src/page/restore/restore_view.dart';
+import 'package:ninjaapp/src/page/task_view.dart';
+import 'package:ninjaapp/src/settings/settings_view.dart';
 import 'settings/settings_controller.dart';
-import 'settings/settings_view.dart';
+
+final GoRouter _router = GoRouter(routes: <RouteBase>[
+  GoRoute(
+      path: MainView.routeName,
+      builder: (BuildContext context, GoRouterState state) {
+        return MainView(settingsController: GetIt.I.get<SettingsController>());
+      },
+      routes: <RouteBase>[
+        GoRoute(
+            name: TaskView.routeName,
+            path: TaskView.routePath,
+            builder: (BuildContext context, GoRouterState state) {
+              return TaskView(
+                numeroTarefa: state.pathParameters['numeroTarefa']!,
+              );
+            }),
+        GoRoute(
+            name: SettingsView.routeName,
+            path: SettingsView.routePath,
+            builder: (BuildContext context, GoRouterState state) {
+              return const SettingsView(key: Key('SettingsView-Key-ID'));
+            })
+      ]),
+]);
 
 /// The Widget that configures your application.
 class MyApp extends StatelessWidget {
@@ -24,7 +50,7 @@ class MyApp extends StatelessWidget {
     return ListenableBuilder(
       listenable: settingsController,
       builder: (BuildContext context, Widget? child) {
-        return MaterialApp(
+        return MaterialApp.router(
           debugShowCheckedModeBanner: false,
           // Providing a restorationScopeId allows the Navigator built by the
           // MaterialApp to restore the navigation stack when a user leaves and
@@ -60,24 +86,7 @@ class MyApp extends StatelessWidget {
           darkTheme: ThemeData.dark(),
           themeMode: settingsController.themeMode,
 
-          // Define a function to handle named routes in order to support
-          // Flutter web url navigation and deep linking.
-          onGenerateRoute: (RouteSettings routeSettings) {
-            return MaterialPageRoute<void>(
-              settings: routeSettings,
-              builder: (BuildContext context) {
-                switch (routeSettings.name) {
-                  case SettingsView.routeName:
-                    return const SettingsView();
-                  case MainView.routeName:
-                    return MainView(settingsController: settingsController);
-                  case RestoreView.routeName:
-                  default:
-                    return RestoreView();
-                }
-              },
-            );
-          },
+          routerConfig: _router,
         );
       },
     );

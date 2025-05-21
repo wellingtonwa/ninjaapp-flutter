@@ -1,9 +1,12 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:ninjaapp/src/data/bitrix_api.dart';
 import 'package:ninjaapp/src/models/ninjaapp_configuracao.dart';
+import 'package:ninjaapp/src/models/workgroup_bitrix.dart';
 import 'package:ninjaapp/src/repository/ninjaapp_configuracao_repository.dart';
 
 import 'settings_controller.dart';
@@ -16,7 +19,8 @@ import 'settings_controller.dart';
 class SettingsView extends StatefulWidget {
   const SettingsView({super.key});
 
-  static const routeName = '/settings';
+  static const routeName = 'settings';
+  static const routePath = '/settings';
 
   @override
   State<StatefulWidget> createState() => SettingsViewState();
@@ -34,9 +38,13 @@ class SettingsViewState extends State<SettingsView> {
   final nomeContainerController = TextEditingController();
   final backupFolderController = TextEditingController();
   final bitrixUrlController = TextEditingController();
+  WorkgroupBitrix? workgroupBitrix;
   bool isPostgresOnDocker = false;
+  bool isValidURLBitrix = false;
   final NinjaappConfiguracaoRepository ninjaappConfiguracaoRepository =
       NinjaappConfiguracaoRepository();
+  final List<WorkgroupBitrix> listWorkgroupBitrix = [];
+  final List<DropdownMenuItem> listWorkgroupMenuItem = [];
 
   int? configId;
 
@@ -59,10 +67,49 @@ class SettingsViewState extends State<SettingsView> {
       taskFolderController.text = ninjaappConfiguracao.taskFolder ?? '';
       backupFolderController.text = ninjaappConfiguracao.backupFolder ?? '';
       bitrixUrlController.text = ninjaappConfiguracao.bitrixUrl ?? '';
+
+      if (ninjaappConfiguracao.bitrixUrl != null) {
+        if (ninjaappConfiguracao.bitrixWorkgroup != null) {
+          workgroupBitrix = WorkgroupBitrix.fromJson(const JsonDecoder()
+              .convert(ninjaappConfiguracao.bitrixWorkgroup!));
+        }
+        verificarUrlIntegracaoBitrix();
+      }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         setState(() {});
       });
     });
+  }
+
+  verificarUrlIntegracaoBitrix() async {
+    setState(() {
+      isValidURLBitrix = false;
+    });
+    try {
+      listWorkgroupBitrix.clear();
+      BitrixApi bitrix = BitrixApi(bitrixUrlController.text, '');
+      listWorkgroupBitrix.addAll(await bitrix.getWorkgroups());
+      if (mounted) {
+        listWorkgroupMenuItem.clear();
+        for (var item in listWorkgroupBitrix) {
+          listWorkgroupMenuItem.add(DropdownMenuItem<WorkgroupBitrix>(
+            value: item,
+            child: Text('${item.id} - ${item.name}'),
+          ));
+        }
+        setState(() {
+          isValidURLBitrix = true;
+        });
+      }
+    } catch (erro) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(erro.toString())));
+    }
+  }
+
+  ValueChanged<dynamic> onChangeWorkgroup(dynamic value) {
+    print(const JsonEncoder().convert(value));
+    return (value) => print('funcionou');
   }
 
   @override
@@ -165,20 +212,45 @@ class SettingsViewState extends State<SettingsView> {
           border: Border.all(color: Colors.grey),
           borderRadius: BorderRadius.circular(8),
         ),
-        margin: const EdgeInsets.symmetric(vertical: 10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Padding(
             padding: EdgeInsets.all(8),
             child: Text('Configuração de Integrações'),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: TextFormField(
-              decoration: const InputDecoration(
-                  border: OutlineInputBorder(), label: Text('Bitrix URL')),
-              controller: bitrixUrlController,
-            ),
-          )
+          Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: TextFormField(
+                    decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        label: Text('Bitrix URL')),
+                    controller: bitrixUrlController,
+                  ),
+                ),
+              ),
+              Tooltip(
+                message:
+                    'Verificar o funcionamento da URL de integração com o Bitrix',
+                child: IconButton(
+                    onPressed: verificarUrlIntegracaoBitrix,
+                    icon: const Icon(Icons.check_box_outlined)),
+              )
+            ],
+          ),
+          if (isValidURLBitrix && listWorkgroupBitrix.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: DropdownButtonFormField(
+                decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    label: Text('Grupo de trabalho')),
+                value: workgroupBitrix,
+                items: listWorkgroupMenuItem,
+                onChanged: (selectedValue) => {workgroupBitrix = selectedValue},
+              ),
+            )
         ]));
 
     Widget postgresFields = Container(
@@ -310,7 +382,8 @@ class SettingsViewState extends State<SettingsView> {
             backupFolder: backupFolderController.text,
             bitrixUrl: bitrixUrlController.text,
             isPostgresOnDocker: isPostgresOnDocker,
-            postgresContainerName: nomeContainerController.text);
+            postgresContainerName: nomeContainerController.text,
+            bitrixWorkgroup: const JsonEncoder().convert(workgroupBitrix));
         if (configId != null) {
           ninjaappConfiguracao.copyWith(id: configId);
         }
@@ -327,6 +400,7 @@ class SettingsViewState extends State<SettingsView> {
             Navigator.pop(context);
           });
         }).catchError((error) {
+          print(error);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Erro ao salvar configuração!')),
           );

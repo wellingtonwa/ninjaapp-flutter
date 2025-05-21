@@ -1,15 +1,16 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:process_run/process_run.dart';
 
 class IOUtil {
-  Future<void> openFolder(String dirPath) async {
+  static Future<void> openFolder(String dirPath) async {
     await run('''
       xdg-open $dirPath
     ''');
   }
 
-  Future<void> createPath(String dirPath, bool createIfNotExists,
+  static Future<void> createPath(String dirPath, bool createIfNotExists,
       {bool? recursive}) async {
     Directory directory = Directory(dirPath);
     bool exists = directory.existsSync();
@@ -18,5 +19,9 @@ class IOUtil {
     } else if (directory.existsSync() == false) {
       throw Exception('o diretório $dirPath não existe');
     }
+  }
+
+  static copyToClipboard(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
   }
 }

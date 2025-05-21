@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:ninjaapp/src/models/workgroup_bitrix.dart';
+
 class NinjaappConfiguracao {
   int? id;
   String? postgresUrl;
@@ -7,6 +11,7 @@ class NinjaappConfiguracao {
   String? taskFolder;
   String? backupFolder;
   String? bitrixUrl;
+  String? bitrixWorkgroup;
   bool? isPostgresOnDocker;
   String? postgresContainerName;
 
@@ -19,6 +24,7 @@ class NinjaappConfiguracao {
       this.taskFolder,
       this.backupFolder,
       this.bitrixUrl,
+      this.bitrixWorkgroup,
       this.isPostgresOnDocker,
       this.postgresContainerName});
 
@@ -33,6 +39,7 @@ class NinjaappConfiguracao {
       'task_folder': taskFolder,
       'backup_folder': backupFolder,
       'bitrix_url': bitrixUrl,
+      'bitrix_workgroup': bitrixWorkgroup,
       'postgres_container': isPostgresOnDocker! ? 1 : 0,
       'postgres_container_name': postgresContainerName
     };
@@ -51,6 +58,7 @@ class NinjaappConfiguracao {
     taskFolder = map['task_folder'] as String?;
     backupFolder = map['backup_folder'] as String?;
     bitrixUrl = map['bitrix_url'] as String?;
+    bitrixWorkgroup = map['bitrix_workgroup'] as String?;
     isPostgresOnDocker = map['postgres_container'] == 1;
     postgresContainerName = map['postgres_container_name'] as String?;
   }
@@ -64,6 +72,7 @@ class NinjaappConfiguracao {
       String? taskFolder,
       String? backupFolder,
       String? bitrixUrl,
+      String? bitrixWorkgroup,
       bool? isPostgresOnDocker,
       String? postgresContainerName}) {
     this.id = id ?? this.id;
@@ -77,5 +86,19 @@ class NinjaappConfiguracao {
     this.postgresContainerName =
         postgresContainerName ?? this.postgresContainerName;
     this.bitrixUrl = bitrixUrl ?? this.bitrixUrl;
+    this.bitrixWorkgroup = bitrixWorkgroup ?? this.bitrixWorkgroup;
+  }
+
+  String getIdBitrixWorkgroup() {
+    var convert = const JsonDecoder().convert('$bitrixWorkgroup');
+    return '${WorkgroupBitrix.fromJson(convert).id}';
+  }
+
+  String getBitrixHost() {
+    String resultado = '';
+    if (bitrixUrl != null && bitrixUrl!.isNotEmpty) {
+      resultado = Uri.parse(bitrixUrl!).host;
+    }
+    return resultado;
   }
 }

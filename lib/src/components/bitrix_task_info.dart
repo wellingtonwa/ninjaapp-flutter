@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ninjaapp/src/components/person_icon.dart';
 import 'package:ninjaapp/src/models/etapa_bitrix.dart';
 import 'package:ninjaapp/src/models/informacao_bitrix.dart';
+import 'package:ninjaapp/src/util/time.util.dart';
 
 class BitrixTaskInfo extends StatefulWidget {
   final InformacaoBitrix item;
@@ -14,16 +15,62 @@ class BitrixTaskInfo extends StatefulWidget {
 }
 
 class _BitrixTaskInfoState extends State<BitrixTaskInfo> {
+  String getDateTime() {
+    String result = widget.item.createdDate ?? '';
+    if (widget.item.createdDate != null) {
+      result = TimeUtil.dbDateToString(result, format: TimeUtil.brTime);
+    }
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Tarefa: ${widget.item.titulo}'),
-        Text(
-            'Etapa: ${widget.etapas.where((etapa) => etapa.ID == widget.item.idEtapa).first.TITLE}'),
-        Text('Criado em: ${widget.item.createdDate}'),
+        Row(
+          children: [
+            const Text(
+              'Tarefa: ',
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+            Expanded(
+              child: Tooltip(
+                message: '${widget.item.titulo}',
+                child: Text(
+                  widget.item.titulo!,
+                  style: const TextStyle(fontWeight: FontWeight.w100),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            const Text('Etapa: '),
+            Text(
+              '${widget.etapas.where((etapa) => etapa.ID == widget.item.idEtapa).first.TITLE}',
+              style: const TextStyle(fontWeight: FontWeight.w100),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            const Text('Criado em: '),
+            Text(
+              getDateTime(),
+              style: const TextStyle(fontWeight: FontWeight.w100),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ],
+        ),
         Row(
           children: [
             const Text('Autor: '),
@@ -36,16 +83,15 @@ class _BitrixTaskInfoState extends State<BitrixTaskInfo> {
             PersonIcon(person: widget.item.responsible!)
           ],
         ),
-        Text('Status: ${widget.item.prioridade}'),
-        // TextButton(
-        //   child: const Text('Abrir pasta'),
-        //   onPressed: () {
-        //     // Handle button press
-        //     Process.run('xdg-open', ['/home/wellington/Downloads/lixo/tarefa-${snapshot.data!.id}']).then((result) {
-        //       print(result.stdout);
-        //     });
-        //   },
-        // )
+        Row(
+          children: [
+            const Text('Status: '),
+            Text(
+              '${widget.item.prioridade}',
+              style: const TextStyle(fontWeight: FontWeight.w100),
+            ),
+          ],
+        ),
       ],
     );
   }

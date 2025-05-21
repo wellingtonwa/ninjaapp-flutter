@@ -56,6 +56,9 @@ class DatabaseHelper {
       ''',
       '''
         ALTER TABLE config ADD COLUMN postgres_port TEXT;
+      ''',
+      '''
+        ALTER TABLE config ADD COLUMN bitrix_workgroup TEXT;
       '''
     ];
 

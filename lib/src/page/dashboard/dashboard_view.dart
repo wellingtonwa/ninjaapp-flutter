@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ninjaapp/src/components/database_card.dart';
 import 'package:ninjaapp/src/data/bitrix_api.dart';
 import 'package:ninjaapp/src/data/postgres_helper.dart';
@@ -15,7 +16,7 @@ import 'package:ninjaapp/src/settings/settings_view.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key, required this.settingsController});
-  static const routeName = '/';
+  static const routeName = '/dashboard';
   final SettingsController settingsController;
 
   @override
@@ -51,8 +52,11 @@ class DashboardViewState extends State<DashboardView> {
     await verificarConexao();
 
     if (settingsController.config.bitrixUrl != null &&
-        settingsController.config.bitrixUrl!.isNotEmpty) {
-      bitrixApi = BitrixApi(settingsController.config.bitrixUrl!);
+        settingsController.config.bitrixUrl!.isNotEmpty &&
+        settingsController.config.bitrixWorkgroup != null &&
+        settingsController.config.bitrixWorkgroup!.isNotEmpty) {
+      bitrixApi = BitrixApi(settingsController.config.bitrixUrl!,
+          settingsController.config.getIdBitrixWorkgroup());
       bitrixApi!.getStageInfo().then((onValue) {
         etapas.clear();
         etapas.addAll(onValue);
@@ -87,7 +91,8 @@ class DashboardViewState extends State<DashboardView> {
     InformacaoBitrix? result;
     String? numeroTarefa = RegExp(r'\d+$').firstMatch(nomeDatabase)?.group(0);
     if (numeroTarefa != null) {
-      result = await BitrixApi(settingsController.config.bitrixUrl!)
+      result = await BitrixApi(settingsController.config.bitrixUrl!,
+              settingsController.config.getIdBitrixWorkgroup())
           .getDadosBitrix(numeroTarefa);
     }
     return result!;
@@ -102,26 +107,26 @@ class DashboardViewState extends State<DashboardView> {
       try {
         print('Conexão válida: ${await postgresHelper.verificarConexao()}');
       } catch (error) {
-        print(error);
+        print('error >>>>>>> $error');
         if (mounted) {
-          Navigator.restorablePushNamed(context, SettingsView.routeName);
+          context.go(SettingsView.routePath);
+          // Navigator.restorablePushNamed(context, SettingsView.routePath);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
                 content: Text(
                     'Erro ao conectar ao postgres. Verifique as configurações.')),
           );
         }
-        ;
       }
     } else {
-      if (mounted) {
-        Navigator.restorablePushNamed(context, SettingsView.routeName);
+      Future.delayed(const Duration(seconds: 1), () {
+        context.go(SettingsView.routePath);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text(
                   'Erro ao conectar ao postgres. Verifique as configurações.')),
         );
-      }
+      });
     }
   }
 
@@ -140,42 +145,32 @@ class DashboardViewState extends State<DashboardView> {
                   ),
                 ],
               )),
-          Visibility(
-            visible: carregado,
+          Expanded(
             child: Column(children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: ElevatedButton(
-                        onPressed: _load, child: const Icon(Icons.refresh)),
-                  ),
-                ],
-              ),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SizedBox(
                     width: MediaQuery.of(context).size.width,
                     height: MediaQuery.of(context).size.height - 200,
-                    child: Visibility(
-                      visible: databases.isNotEmpty,
-                      child: GridView.builder(
-                          gridDelegate:
-                              SliverGridDelegateWithMaxCrossAxisExtent(
-                                  maxCrossAxisExtent: 400),
-                          itemCount: databases.length,
-                          itemBuilder: (context, index) {
-                            Database banco = databases[index];
-                            return DatabaseCard(
-                              key: Key('database-card-${banco.dbName}'),
-                              settingsController,
-                              etapas,
-                              _load,
-                              database: banco,
-                            );
-                          }),
-                    )),
+                    child: databases.isNotEmpty
+                        ? GridView.builder(
+                            gridDelegate:
+                                const SliverGridDelegateWithMaxCrossAxisExtent(
+                                    maxCrossAxisExtent: 375,
+                                    mainAxisExtent: 220,
+                                    crossAxisSpacing: 4),
+                            itemCount: databases.length,
+                            itemBuilder: (context, index) {
+                              Database banco = databases[index];
+                              return DatabaseCard(
+                                key: Key('database-card-${banco.dbName}'),
+                                settingsController,
+                                etapas,
+                                _load,
+                                database: banco,
+                              );
+                            })
+                        : const Text('Nenhuma base de dados encontrada')),
               ),
             ]),
           ),

@@ -11,6 +11,7 @@ class InformacaoBitrix {
   String? codigoCliente;
   PersonBitrix? responsible;
   PersonBitrix? creator;
+  List<String>? attachments;
 
   InformacaoBitrix.empty();
 
@@ -25,6 +26,9 @@ class InformacaoBitrix {
     idEtapa = json['stageId'] as String?;
     responsible = PersonBitrix.fromJson(json['responsible']);
     creator = PersonBitrix.fromJson(json['creator']);
+    attachments = (json['ufTaskWebdavFiles'] as List<dynamic>?)
+        ?.map((e) => e.toString())
+        .toList();
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ninjaapp/src/page/dashboard/dashboard_view.dart';
 import 'package:ninjaapp/src/page/log_view.dart';
 import 'package:ninjaapp/src/page/restore/restore_view.dart';
@@ -43,6 +44,7 @@ class MainViewState extends State<MainView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blueGrey[400],
         title: const Text('Ninja App'),
         actions: [
           IconButton(
@@ -51,7 +53,7 @@ class MainViewState extends State<MainView> {
               // Navigate to the settings page. If the user leaves and returns
               // to the app after it has been killed while running in the
               // background, the navigation stack is restored.
-              Navigator.restorablePushNamed(context, SettingsView.routeName);
+              context.go(SettingsView.routePath);
             },
           ),
         ],

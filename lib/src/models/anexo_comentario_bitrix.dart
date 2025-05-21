@@ -14,7 +14,7 @@ class AnexoComentarioBitrix {
     DOWNLOAD_URL = json['DOWNLOAD_URL'] as String?;
     VIEW_URL = json['VIEW_URL'] as String?;
   }
-  
+
   @override
   String toString() {
     // TODO: implement toString
